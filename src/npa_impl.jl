@@ -104,10 +104,19 @@ function set_solver!(solver)
 end
 
 
-
-if !@isdefined(default_silent)
-    default_silent = true
+#NEW NEW NEW
+if !@isdefined(default_threads)
+    default_threads = 0
 end
+
+"Set the default number of threads for Mosek"
+function set_threads!(threads)
+    global default_threads = threads
+end
+
+#END NEW
+
+
 
 "Set default JuMP model verbosity"
 function set_verbosity!(silent::Bool)
@@ -123,11 +132,21 @@ end
 
 
 
-function jump_model(solver=default_solver, silent=default_silent)
+function jump_model(solver=default_solver, silent=default_silent, threads=default_threads)
     model = (!isnothing(solver) ? Model(solver) : Model())
 
     if !isnothing(silent)
         set_verbosity!(model, silent)
+    end
+    
+    if solver==Mosek.Optimizer
+    #uses the assignment I did earlier    
+        if !isnothing(threads)
+            set_threads!(threads)
+        end
+    #This explains how to change the number of threads https://docs.mosek.com/latest/pythonapi/parameters.html#mosek.iparam.num_threads
+    #This explains how to pass update model parameters in JuMP before passing to Mosek https://github.com/jump-dev/MosekTools.jl
+        set_attribute(model, "MSK_IPAR_NUM_THREADS", threads)
     end
 
     return model
@@ -183,11 +202,12 @@ end
 function sdp2jump_d(expr, ineqs;
                     sense=:maximise,
                     solver=default_solver,
-                    silent=default_silent)
+                    silent=default_silent,
+                    threads=default_threads)
     maximise = maximise_p(sense)
     s = (maximise ? 1 : -1)
 
-    model = jump_model(solver, silent)
+    model = jump_model(solver, silent, threads)
 
     Zs = [@variable(model, [1:m, 1:n], PSD)
           for (m, n) in size_as_pair.(ineqs)]
@@ -226,8 +246,9 @@ end
 function sdp2jump(expr, ineqs;
                   sense=:maximise,
                   solver=default_solver,
-                  silent=default_silent)
-    model = jump_model(solver, silent)
+                  silent=default_silent,
+                  threads=default_threads)
+    model = jump_model(solver, silent, threads)
 
     mons = filter(!isidentity, monomials(ineqs))
 
