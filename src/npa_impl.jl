@@ -133,6 +133,8 @@ end
 
 
 function jump_model(solver=default_solver, silent=default_silent, threads=default_threads)
+    #ALTERNATIVELY, the link below suggests to wrap the model with optimizer_with_attributes() and a set parameter when creating the model
+    #https://github.com/jump-dev/JuMP.jl/blob/13ad5db156210f805699e8a1004610d60bc3be3b/src/JuMP.jl#L56-L89
     model = (!isnothing(solver) ? Model(solver) : Model())
 
     if !isnothing(silent)
